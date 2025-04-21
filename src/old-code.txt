@@ -15,8 +15,8 @@ volatile uint16_t pwmCounter = 0;
 volatile uint16_t currentDuty = 512;
 
 // Stream URL (use Icecast/MP3 stream)
-const char* streamURL = "http://stream.bauermedia.sk/expres-lo.mp3";  // Example
-//const char* streamURL = "http://192.168.0.106:8000/stream.mp3";
+//const char* streamURL = "http://stream.bauermedia.sk/expres-lo.mp3";  // Example
+const char* streamURL = "http://192.168.0.106:8000/stream.mp3";
 
 
 AudioGeneratorMP3 *mp3;
@@ -34,16 +34,7 @@ void IRAM_ATTR onTimerISR() {
   }
   if (pwmCounter >= 255) pwmCounter = 0;*/
 
- // analogWrite(D1, currentDuty);
-  
-  uint8_t val = out->read();
-  if (val != 0) {
-    digitalWrite(D0, val & 0b00001);
-    digitalWrite(D1, val & 0b00010);
-    digitalWrite(D2, val & 0b00100);
-    digitalWrite(D3, val & 0b01000);
-    digitalWrite(D4, val & 0b10000);
-  }
+  analogWrite(D1, currentDuty);
 }
 
 
@@ -79,16 +70,17 @@ void setup() {
   mp3->begin(buff, out);
  // analogWriteFreq(30000);
 
-  noInterrupts();
+ /* noInterrupts();
 
   // Timer1 config: 80MHz / 1 = 80MHz, so 2.5µs tick = 25% of 40kHz PWM period
   timer1_attachInterrupt(onTimerISR);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
-  timer1_enable(TIM_DIV1, TIM_EDGE, TIM_LOOP);  // Use prescaler of 1
-  timer1_write(1815*1.9);
+  timer1_write(50); // 200 ticks = 2.5µs, for 400kHz PWM resolution
 
-  interrupts();
+  interrupts();*/
 
+
+  out->setCurrentDutyVar(&currentDuty);
 }
 
 void loop() {

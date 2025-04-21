@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <AudioOutput.h>
 
+#define BUFF_LEN 4096
 
 class ESPAudioOutput : public AudioOutput {
 public:
@@ -45,27 +46,36 @@ bool begin() {
     return true;
 }
 
-void setCurrentDutyVar(volatile uint16_t* currentDuty) {
-    this->currentDuty = currentDuty;
+int16_t* getBufferPtr() {
+    return &buffer[write_index++ % BUFF_LEN];
 }
 
-
+void incrementPtr(int val) {
+    write_index += val;
+}
 
 bool ConsumeSample(int16_t sample[2]) {
    // Serial.print("sample: ");
    // Serial.println(sample[0]);
    // uint8_t mappedValue = (uint8_t)(((sample[0] + 32768) / 65535.0) * 255);
-    uint8_t val = (uint32_t)(sample[0] + 32768) * 16 / 65535;
+    buffer[write_index++ % BUFF_LEN] = sample[0];
 
+  /*  while(micros() - lastMicros < 10);
+    lastMicros = micros();
 //if (counter++ % 4 == 0) {
-    digitalWrite(D1, val & 0b0001);
-    digitalWrite(D2, val & 0b0010);
-    digitalWrite(D3, val & 0b0100);
-    digitalWrite(D4, val & 0b1000);
-
+    digitalWrite(D0, val & 0b00001);
+    digitalWrite(D1, val & 0b00010);
+    digitalWrite(D2, val & 0b00100);
+    digitalWrite(D3, val & 0b01000);
+    digitalWrite(D4, val & 0b10000);*/
 //}
 
     return true;
+}
+
+uint8_t read() {
+    if (read_index > write_index) return 0;
+    return  (uint32_t)(buffer[++read_index % BUFF_LEN] + 32768) * 32 / 65535;
 }
 
 void flush() {
@@ -79,6 +89,7 @@ bool stop() {
 
 
 private:
-    int counter;
-    volatile uint16_t *currentDuty;
+    int16_t buffer[BUFF_LEN];
+    int write_index = 0;
+    int read_index = -1;
 };
