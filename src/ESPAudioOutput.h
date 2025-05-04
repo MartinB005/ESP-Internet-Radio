@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <AudioOutput.h>
 
-#define BUFF_LEN 4096
+#define BUFF_LEN 6000
 
 class ESPAudioOutput : public AudioOutput {
 public:
@@ -54,6 +54,10 @@ void incrementPtr(int val) {
     write_index += val;
 }
 
+bool bufferAvailable() {
+    return write_index - read_index < BUFF_LEN;
+}
+
 bool ConsumeSample(int16_t sample[2]) {
    // Serial.print("sample: ");
    // Serial.println(sample[0]);
@@ -74,8 +78,15 @@ bool ConsumeSample(int16_t sample[2]) {
 }
 
 uint8_t read() {
-    if (read_index > write_index) return 0;
-    return  (uint32_t)(buffer[++read_index % BUFF_LEN] + 32768) * 32 / 65535;
+    if (read_index > write_index) {
+        return 0;
+    }
+    
+    uint8_t val = (uint32_t)(buffer[++read_index % BUFF_LEN] + 32768) * 256 / 65535;
+    //if (val >= 36) return 0;
+   //  if (read_index > 100000) Serial.println("!!!");
+   // Serial.println((uint32_t)(buffer[++read_index % BUFF_LEN] + 32768) * 64 / 65535);
+    return  val;
 }
 
 void flush() {

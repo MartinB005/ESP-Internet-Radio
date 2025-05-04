@@ -7,6 +7,8 @@
 #include <ESPAudioOutput.h>
 #include <AudioOutputSPDIF.h>
 
+#define ADC_RESOLUTION 10
+
 // WiFi credentials
 const char* ssid = "DDAM";
 const char* password = "ke257-NT_61_ab";
@@ -14,16 +16,27 @@ const char* password = "ke257-NT_61_ab";
 volatile uint16_t pwmCounter = 0;
 volatile uint16_t currentDuty = 512;
 
-// Stream URL (use Icecast/MP3 stream)
-const char* streamURL = "http://stream.bauermedia.sk/expres-lo.mp3";  // Example
-//const char* streamURL = "http://192.168.0.106:8000/stream.mp3";
+//RELAX RADIO
+//const char* streamURL = "http://icecast7.play.cz/relax128.mp3";
 
+//ROCK RADIO
+//const char* streamURL = "http://ice.radia.cz/rockzabava128.mp3";
+
+//EXPRESS SK
+const char* streamURL = "http://stream.bauermedia.sk/expres-lo.mp3"; 
+
+//NETWORK
+//const char* streamURL = "http://192.168.0.106:8000/mystream";
+
+//HOTSPOT
+//const char* streamURL = "http://10.42.0.1:8000/stream.mp3";
 
 AudioGeneratorMP3 *mp3;
 AudioFileSourceHTTPStream *file;
 AudioFileSourceBuffer *buff;
 ESPAudioOutput *out;
 
+uint8_t dac_pins[] = { D8, D7, D6, D5, D4, D3, D2, D1};
 
 void IRAM_ATTR onTimerISR() {
  /* pwmCounter++;
@@ -37,22 +50,31 @@ void IRAM_ATTR onTimerISR() {
  // analogWrite(D1, currentDuty);
   
   uint8_t val = out->read();
+  uint16_t high = 0;
+  uint16_t low = 0;
+
   if (val != 0) {
-    digitalWrite(D0, val & 0b00001);
-    digitalWrite(D1, val & 0b00010);
-    digitalWrite(D2, val & 0b00100);
-    digitalWrite(D3, val & 0b01000);
-    digitalWrite(D4, val & 0b10000);
+    
+    for (int i = 0; i < 8; i++) {
+      if (val & (1 << i)) high |= (1 << dac_pins[i]);
+      else low |= (1 << dac_pins[i]);
+    }
+
+    GPOS = high;
+    GPOC = low;
   }
 }
 
 
 void setup() {
   Serial.begin(115200);
-  pinMode(D1, OUTPUT);
-  pinMode(D2, OUTPUT);
-  pinMode(D3, OUTPUT);
-  pinMode(D4, OUTPUT);
+ 
+ 
+  for (uint8_t pin : dac_pins) {
+    pinMode(pin, OUTPUT);
+  }
+
+
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -85,7 +107,7 @@ void setup() {
   timer1_attachInterrupt(onTimerISR);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
   timer1_enable(TIM_DIV1, TIM_EDGE, TIM_LOOP);  // Use prescaler of 1
-  timer1_write(1815*1.9);
+  timer1_write(1815*2);
 
   interrupts();
 
