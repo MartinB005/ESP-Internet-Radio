@@ -6,12 +6,15 @@
 #include <AudioGeneratorMP3.h>
 #include <ESPAudioOutput.h>
 #include <AudioOutputSPDIF.h>
+#include <Ticker.h>
 
-#define ADC_RESOLUTION 10
+#include "radio_stations.h"
+
+#define ADC_RESOLUTION 9
 
 // WiFi credentials
-const char* ssid = "DDAM";
-const char* password = "ke257-NT_61_ab";
+const char* ssid = "DDAM3M";
+const char* password = "matus987";
 
 volatile uint16_t pwmCounter = 0;
 volatile uint16_t currentDuty = 512;
@@ -23,39 +26,33 @@ volatile uint16_t currentDuty = 512;
 //const char* streamURL = "http://ice.radia.cz/rockzabava128.mp3";
 
 //EXPRESS SK
-const char* streamURL = "http://stream.bauermedia.sk/expres-lo.mp3"; 
+//const char* streamURL = "http://stream.bauermedia.sk/expres-lo.mp3"; 
 
 //NETWORK
 //const char* streamURL = "http://192.168.0.106:8000/mystream";
 
 //HOTSPOT
-//const char* streamURL = "http://10.42.0.1:8000/stream.mp3";
+const char* streamURL = "http://10.42.0.1:8000/stream.mp3";
 
 AudioGeneratorMP3 *mp3;
 AudioFileSourceHTTPStream *file;
 AudioFileSourceBuffer *buff;
 ESPAudioOutput *out;
 
-uint8_t dac_pins[] = { D8, D7, D6, D5, D4, D3, D2, D1};
+uint8_t dac_pins[] = { 1, D8, D7, D6, D5, D4, D3, D2, D1};
+int currentStation = 0;
+
+Ticker button;
+bool next = false;
 
 void IRAM_ATTR onTimerISR() {
- /* pwmCounter++;
-  if (pwmCounter < currentDuty) {
-    GPOS = (1 << D1); // Set pin HIGH
-  } else {
-    GPOC = (1 << D1); // Set pin LOW
-  }
-  if (pwmCounter >= 255) pwmCounter = 0;*/
-
- // analogWrite(D1, currentDuty);
-  
   uint8_t val = out->read();
   uint16_t high = 0;
   uint16_t low = 0;
 
   if (val != 0) {
     
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < ADC_RESOLUTION; i++) {
       if (val & (1 << i)) high |= (1 << dac_pins[i]);
       else low |= (1 << dac_pins[i]);
     }
@@ -65,14 +62,68 @@ void IRAM_ATTR onTimerISR() {
   }
 }
 
+void startListening(const char* streamURL) {
+  //noInterrupts();
+  if (mp3 != NULL) {
+    mp3->stop();
+    delete mp3;
+    delete file;
+    delete buff;
+    delete out;
+   // mp3 = NULL;
+  //  delete buff;
+   // delete out;
+  }
+  delay(1000);
+  Serial.println("next station");
+  Serial.println(streamURL);
+
+  file = new AudioFileSourceICYStream(streamURL);
+
+  // Commented out for performance issues with high rate MP3 stream
+  //file->RegisterMetadataCB(MDCallback, (void*)"ICY");
+
+  buff = new AudioFileSourceBuffer(file, 4096);
+  out = new ESPAudioOutput();
+  mp3 = new AudioGeneratorMP3();
+  
+
+  bool success = mp3->begin(buff, out);
+  Serial.println(success);
+}
+
+
+void checkButton() {
+//  Serial.println("check");
+ if (analogRead(A0) > 1000 && !next) {
+    currentStation = (currentStation + 1) % RADIO_COUNT;
+    next = true;
+    mp3->pause();
+   // startListening(stations[currentStation]);
+ }
+}
 
 void setup() {
   Serial.begin(115200);
- 
+  button.attach(0.1, checkButton);
+
+  pinMode(A0, INPUT);
  
   for (uint8_t pin : dac_pins) {
     pinMode(pin, OUTPUT);
   }
+
+
+  /*int pin = 3;
+  pinMode(pin, OUTPUT);
+
+
+  for (int i = 0; i < 20; i++) {
+    digitalWrite(pin, HIGH);
+    delay(500);
+    digitalWrite(pin, LOW);
+    delay(500);
+  }*/
 
 
 
@@ -89,13 +140,13 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   // Setup streaming and audio pipeline
-  file = new AudioFileSourceICYStream(streamURL);
+  file = new AudioFileSourceICYStream(stations[currentStation]);
 
   // Commented out for performance issues with high rate MP3 stream
   //file->RegisterMetadataCB(MDCallback, (void*)"ICY");
 
   buff = new AudioFileSourceBuffer(file, 4096);
-  out = new ESPAudioOutput(8000L);
+  out = new ESPAudioOutput();
   mp3 = new AudioGeneratorMP3();
 
   mp3->begin(buff, out);
@@ -114,8 +165,15 @@ void setup() {
 }
 
 void loop() {
-  if (mp3->isRunning()) {
+
+  if (mp3 != NULL && mp3->isRunning()) {
     mp3->loop();
+
+  } else if (next) {
+    Serial.println("MP3 next");
+    Serial.println(currentStation);
+    startListening(stations[currentStation]);
+    next = false;
   } else {
     Serial.println("MP3 stopped");
     delay(1000);
