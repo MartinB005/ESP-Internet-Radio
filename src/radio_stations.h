@@ -3,6 +3,7 @@
 #define EXPRESS_SK "http://stream.bauermedia.sk/expres-lo.mp3"
 #define DANCE "http://ice.actve.net/dance-radio128.mp3"
 #define VLTAVA "http://icecast3.play.cz/cro3-64.mp3"
+#define RADIOZURNAL "https://rozhlas.stream/radiozurnal_mp3_128.mp3"
 #define KISS "http://n22a-eu.rcs.revma.com/asn0cmvb938uv?rj-ttl=5&rj-tok=AAABlu10mMsAnsEg4VXHd5VSeA"
 #define KOSICE "http://stream.21.sk/radiokosice-128.mp3"
 #define BUDAPEST "http://icast.connectmedia.hu/5202/live.mp3"
@@ -15,7 +16,7 @@
 
 
 static char* stations[] = {
-    RELAX, ROCK, EXPRESS_SK, DANCE, VLTAVA, DEUTSCH_ROCK, KOSSUTH, BUDAPEST, KOSICE, FRANCE_CULTURE, ITALY_MUSIC, JAPAN_HITS, NETWORK
+    RELAX, ROCK, EXPRESS_SK, RADIOZURNAL, DANCE, VLTAVA, DEUTSCH_ROCK, KOSSUTH, BUDAPEST, KOSICE, FRANCE_CULTURE, ITALY_MUSIC, JAPAN_HITS, NETWORK
 };
 
 #define RADIO_COUNT (sizeof(stations) / sizeof(char*))

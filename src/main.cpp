@@ -40,7 +40,7 @@ AudioFileSourceBuffer *buff;
 ESPAudioOutput *out;
 
 uint8_t dac_pins[] = { 1, D8, D7, D6, D5, D4, D3, D2, D1};
-int currentStation = 0;
+static int currentStation = 0;
 
 Ticker button;
 bool next = false;
